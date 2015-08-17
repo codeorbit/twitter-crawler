@@ -1,0 +1,24 @@
+import urllib2
+file=open("/home/sys8/twitter/temp_tracker.txt","r")
+x=file.readlines()
+import timeit
+import os
+#start = timeit.default_timer()
+
+#Your statements here
+
+
+for i in range(len(x)):
+	sp= x[i].split("##")
+	print sp[1]
+	url=urllib2.urlopen(sp[1]).read()
+	user_name=sp[1].split('/')[3]
+	filename="%s_db"%user_name
+	fileopen=open("/home/sys8/twitter/db/"+str(filename),"a+")
+	fileopen.write(url)
+
+#stop = timeit.default_timer()
+os.remove("/home/sys8/twitter/temp_tracker.txt")
+
+temptracker=open("/home/sys8/twitter/temp_tracker.txt","a+")
+

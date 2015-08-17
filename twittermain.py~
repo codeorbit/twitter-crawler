@@ -1,0 +1,106 @@
+from simplejson import loads
+import threading
+import urllib2
+import requests
+import MySQLdb
+import time
+
+#db = MySQLdb.connect('localhost','root','#brainse','twitter')
+#cursor = db.cursor()
+#insert_sql="insert into profiles (user_id,user_name,user_url) values(%s,%s,%s)"
+
+proxy=urllib2.ProxyHandler({})
+opener=urllib2.build_opener(proxy)
+opener.addheaders=[('User-agent','Mozilla/5.0')]
+urllib2.install_opener(opener)
+from bs4 import BeautifulSoup as bs
+from collections import OrderedDict
+dic=OrderedDict()
+
+main_list=[]
+start="737848638"
+filetracker=open("/home/sys8/twitter/twitter_track.txt","a+")
+dic[737848638]="https://twitter.com/legendstevejobs"
+
+temptracker=open("/home/sys8/twitter/temp_tracker.txt","a+")
+def id_Checker(user_id):
+	global dic
+	if user_id in dic.keys():
+		return False
+	else :		
+		return True
+
+
+
+
+def pagedownloader(user_id,user_url):
+	url=urllib2.urlopen(user_url).read()
+	user_name=user_url.split('/')[3]
+	
+	#filename="%s_db"%user_name
+	#fileopen=open("/home/akhil/Desktop/twitter/db/"+str(filename),"a")
+	#fileopen.write(url)
+	
+	#record=[MySQLdb.escape_string(str(user_id)),MySQLdb.escape_string(str(user_name)),MySQLdb.escape_string(str(user_url))]
+	#print record
+	#cursor.execute(insert_sql,record)
+	#db.commit()
+	filetracker.write(str(user_id)+"##"+str(user_url)+"##"+str(user_name)+"\n")
+	temptracker.write(str(user_url)+"\n")
+	
+def urlmaker(user_id,user_url):
+	try:
+		global dic
+		global main_list
+		
+		r=requests.get("https://twitter.com/i/related_users/"+str(user_id))
+		#print r.status_code
+		if r.status_code==requests.codes.ok:
+			
+			pagedownloader(user_id,user_url)
+			print user_url
+			data=(loads(r.content))
+			data=data.get('related_users_html')
+			soup=bs(data)
+			div=soup.findAll("div",{"class":"content"})
+			for i in range(len(div)):
+				#print "https://twitter.com"+div[i].find("a").get("href")
+				user_id=div[i].find("a").get("data-user-id")
+		
+				check=id_Checker(user_id)
+		
+				if check:
+					
+					main_list.append(div[i].find("a").get("data-user-id"))
+					dic[div[i].find("a").get("data-user-id")]=str("https://twitter.com"+div[i].find("a").get("href"))
+			#pagedownloader(user_id,user_url)
+	
+		#print dic
+		#print main_list
+	except Exception as exp:
+		print "******************EXCEPTION********************************"
+		print exp
+		
+		
+urlmaker(737848638,"https://twitter.com/legendstevejobs")
+index=1
+
+while True:
+	
+	try :  
+		if index==100:
+			
+			print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$"
+			print "                        SLEEPING                                  "
+			print "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$" 
+			time.sleep(300)
+			
+		else:
+			if threading.activeCount()<3:
+				print "count is :: "+str(index)
+				threading.Thread(target=urlmaker,args=(dic.keys()[index],dic.values()[index],)).start()
+				index=index+1
+	except Exception as exp:
+		print "@@@@@@@@@@@@@@@@@@@@@@@EXCEPTION@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"	
+		print exp
+
